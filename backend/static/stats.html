@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>统计 - 记账助手</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,sans-serif;max-width:980px;margin:auto;padding:24px;background:#f5f7fb;color:#263449;font-size:14px}h1{margin:0;font-size:22px;line-height:1.2}.top{display:flex;align-items:center;gap:24px;min-height:36px;margin-bottom:20px}.nav{display:flex;align-items:center;gap:4px}.nav a{padding:8px 14px;border-radius:8px;text-decoration:none;color:#667085;line-height:1}.nav a.active{background:#e7f0ff;color:#2875cf;font-weight:600}.filters,.card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 10px #1822300d}.filters{display:flex;gap:10px;align-items:center}select{padding:7px 10px;border:1px solid #d8e0ec;border-radius:8px;font:inherit}.summary{display:flex;gap:12px;flex-wrap:wrap}.metric{flex:1;min-width:180px;background:#f8fafc;border-radius:12px;padding:14px}.metric b{display:block;font-size:22px;color:#2875cf;margin-top:6px}.metric.total b{color:#e45757}.bar{height:8px;background:#edf1f7;border-radius:8px;overflow:hidden}.bar i{display:block;height:100%;background:#5b9bea;border-radius:8px}.row{margin:12px 0}.rowline{display:flex;justify-content:space-between;margin-bottom:5px}.muted{color:#98a2b3}
+@media (max-width:640px){body{padding:14px;font-size:13px}.top{gap:14px;margin-bottom:16px}.top h1{font-size:20px}.nav a{padding:7px 9px}.filters{padding:12px;gap:7px}.filters select{padding:6px 8px}.card{padding:14px;margin:10px 0}.metric{min-width:0;padding:12px}.metric b{font-size:20px}.card h2{font-size:17px;margin:4px 0 14px}.row{margin:10px 0}}
+</style>
+<style>
+#bottom-nav{display:none}
+@media (max-width:640px){body{padding-bottom:82px}#bottom-nav{position:fixed;display:flex;left:0;right:0;bottom:0;height:64px;padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid #e6eaf0;z-index:20;justify-content:space-around}#bottom-nav a{flex:1;text-align:center;padding-top:21px;color:#667085;text-decoration:none;font-size:13px}#bottom-nav a.active{color:#2875cf;font-weight:600}}
+</style></head><body>
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/access.js" defer></script>
+<div class="top"><h1>记账助手</h1><nav class="nav"><a href="/bookkeeping.html">账单</a><a class="active" href="/stats.html">统计</a><a href="/settings.html">设置</a></nav></div>
+<div class="filters"><b>统计周期</b><select id="year"></select><select id="month"><option value="">全年</option><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+<div class="summary"><div class="metric total">总支出<b id="total">¥0.00</b></div><div class="metric">交易笔数<b id="count">0</b></div><div class="metric">分类数量<b id="cats">0</b></div></div>
+<div class="card"><h2>分类支出</h2><div id="category"></div></div>
+<div class="card"><h2>月度趋势</h2><div id="monthly" class="muted">暂无数据</div></div>
+<nav id="bottom-nav"><a href="/bookkeeping.html">账单</a><a class="active" href="/stats.html">统计</a><a href="/settings.html">设置</a></nav>
+<script>
+const now=new Date(), yearEl=document.getElementById('year'), monthEl=document.getElementById('month');
+for(let y=now.getFullYear();y>=now.getFullYear()-10;y--){let o=document.createElement('option');o.value=y;o.textContent=y+'年';yearEl.appendChild(o)} yearEl.value=now.getFullYear();monthEl.value=now.getMonth()+1;
+async function refresh(){const y=yearEl.value,m=monthEl.value;const s=await (await fetch('/api/stats/summary?year='+y+(m?'&month='+m:''))).json();document.getElementById('total').textContent='¥'+s.total.toFixed(2);document.getElementById('count').textContent=s.by_category.reduce((a,c)=>a+c.count,0);document.getElementById('cats').textContent=s.by_category.length;const max=Math.max(...s.by_category.map(c=>c.amount),1);document.getElementById('category').innerHTML=s.by_category.length?s.by_category.sort((a,b)=>b.amount-a.amount).map(c=>'<div class="row"><div class="rowline"><span>'+esc(c.category)+'（'+c.count+'笔）</span><b>¥'+c.amount.toFixed(2)+'</b></div><div class="bar"><i style="width:'+c.amount/max*100+'%"></i></div></div>').join(''):'<p class="muted">该周期暂无账单</p>';const ms=await (await fetch('/api/stats/monthly')).json();document.getElementById('monthly').innerHTML=ms.length?ms.slice(-12).map(x=>'<div class="rowline"><span>'+x.month+'</span><b>¥'+x.amount.toFixed(2)+'</b></div>').join(''):'暂无数据'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}yearEl.onchange=refresh;monthEl.onchange=refresh;refresh();
+</script></body></html>

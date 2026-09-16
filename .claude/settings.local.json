@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(docker exec *)",
+      "Bash(curl -s -X POST http://localhost:6640/api/receipts -F \"files=@data/images/20260915_b11088e5d9175783.jpeg;type=image/jpeg\" --max-time 300)"
+    ]
+  }
+}

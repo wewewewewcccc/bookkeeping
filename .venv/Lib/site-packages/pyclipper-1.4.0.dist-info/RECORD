@@ -1,0 +1,11 @@
+pyclipper-1.4.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+pyclipper-1.4.0.dist-info/METADATA,sha256=mP5woYspEQRIsYTe6qW82dAYzp6dtu8jLdAxRraPH3g,8824
+pyclipper-1.4.0.dist-info/RECORD,,
+pyclipper-1.4.0.dist-info/WHEEL,sha256=KUuBC6lxAbHCKilKua8R9W_TM71_-9Sg5uEP3uDWcoU,101
+pyclipper-1.4.0.dist-info/licenses/LICENSE,sha256=c8JVOef7SGuDTDN0fVeeC8VsD5hClMiPPLIylCC6MA8,1131
+pyclipper-1.4.0.dist-info/top_level.txt,sha256=UVFN1OorK8Tem_Lo-jt_VzN3Xr22gvNHQoJozMLG99Y,10
+pyclipper/__init__.py,sha256=7cKvIw0gcxhZf2w05gEM0aaNpBao3_EebS4LDjUMbw8,141
+pyclipper/__pycache__/__init__.cpython-310.pyc,,
+pyclipper/__pycache__/_version.cpython-310.pyc,,
+pyclipper/_pyclipper.cp310-win_amd64.pyd,sha256=PuPj1WvZAU-Vww1FWX2x5G8ZfCkhvtuISzUAXoN1pU4,218624
+pyclipper/_version.py,sha256=KkD1XESiLxTglj-JuBNO5Is7st5fszrQZHs8nXOGXhE,746

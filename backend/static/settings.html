@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分类设置 - 记账助手</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; max-width: 980px; margin: 0 auto; padding: 24px; background: #f5f7fb; color: #263449; }
+  h1 { font-size: 22px; }
+  .back { color: #35618e; text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 14px; }
+  .back:hover { color: #4a90d9; }
+  .card { background: #fff; border-radius: 10px; padding: 18px 20px; margin: 14px 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  input, button { font: inherit; padding: 7px 10px; border: 1px solid #d8dee9; border-radius: 7px; background: #fff; }
+  input:focus { outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,.14); }
+  button { color: #344054; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+  button:hover { background: #f1f6fd; border-color: #4a90d9; }
+  button:active { transform: translateY(1px); }
+  #categories { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  #categories .item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: #f5f8fc; color: #35618e; font-size: 14px; }
+  #categories .item button { border: none; background: none; color: #98a6b8; padding: 0 2px; font-size: 15px; }
+  #categories .item button:hover { color: #b42318; background: none; }
+  #add-form { display: flex; gap: 8px; }
+  #add-form input { flex: 1; }
+  #add-form button { background: #3978c8; border-color: #3978c8; color: #fff; }
+  #add-form button:hover { background: #2f66aa; }
+  #hint { color: #98a6b8; font-size: 13px; margin-top: 10px; }
+  #topnav { display:flex; align-items:center; gap:4px; margin-bottom:24px; }
+  #topnav h1 { margin-right:18px; }
+  #topnav a { padding:8px 14px; border-radius:8px; color:#667085; text-decoration:none; }
+  #topnav a.active { background:#e7f0ff; color:#2875cf; font-weight:600; }
+  #bottom-nav { display:none; }
+  @media (max-width: 640px) {
+    body { padding: 14px; }
+    body { padding-bottom: 82px; }
+    #topnav { flex-wrap:nowrap; gap:0; margin-bottom:16px; white-space:nowrap; }
+    #topnav h1 { width:auto; margin-right:8px; }
+    #topnav a { padding:7px 10px; }
+    h1 { font-size: 21px; }
+    .card { padding: 14px; }
+    #add-form { flex-wrap: wrap; }
+    #add-form input { min-width: 0; width: 100%; }
+    #add-form button { width: 100%; }
+    #categories .item { font-size: 13px; padding: 5px 10px; }
+    #hint { line-height: 1.6; }
+    #bottom-nav { position:fixed; display:flex; left:0; right:0; bottom:0; height:64px; padding-bottom:env(safe-area-inset-bottom); background:#fff; border-top:1px solid #e6eaf0; z-index:20; justify-content:space-around; }
+    #bottom-nav a { flex:1; text-align:center; padding-top:21px; color:#667085; text-decoration:none; font-size:13px; }
+    #bottom-nav a.active { color:#2875cf; font-weight:600; }
+  }
+</style>
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/access.js" defer></script>
+</head>
+<body>
+<div id="topnav"><h1>记账助手</h1><a href="/bookkeeping.html">账单</a><a href="/stats.html">统计</a><a class="active" href="/settings.html">设置</a></div>
+<div class="card">
+  <div id="categories"></div>
+  <div id="add-form">
+    <input id="newCategory" placeholder="输入新分类名称">
+    <button id="addCategory">新增分类</button>
+  </div>
+  <p id="hint">删除分类不影响已有的历史记录，但历史记录将无法再选择该分类。</p>
+</div>
+<nav id="bottom-nav"><a href="/bookkeeping.html">账单</a><a href="/stats.html">统计</a><a class="active" href="/settings.html">设置</a></nav>
+
+<script>
+const DEFAULT_CATEGORIES = ["餐饮","购物","交通","日用","娱乐","医疗","其他"];
+
+function getCategories() {
+  return JSON.parse(localStorage.getItem('bookkeeping_categories') || JSON.stringify(DEFAULT_CATEGORIES));
+}
+function saveCategories(categories) {
+  localStorage.setItem('bookkeeping_categories', JSON.stringify(categories));
+}
+function render() {
+  const categories = getCategories();
+  document.getElementById('categories').innerHTML = categories.map(c =>
+    `<span class="item">${esc(c)}<button title="删除" onclick="removeCategory(${JSON.stringify(c)})">×</button></span>`
+  ).join('') || '<span style="color:#98a6b8">暂无分类，请先新增</span>';
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function addCategory() {
+  const input = document.getElementById('newCategory');
+  const value = input.value.trim();
+  if (!value) return;
+  const categories = getCategories();
+  if (!categories.includes(value)) categories.push(value);
+  saveCategories(categories);
+  input.value = '';
+  render();
+}
+function removeCategory(value) {
+  const categories = getCategories().filter(c => c !== value);
+  if (!categories.length) {
+    alert('至少保留一个分类');
+    return;
+  }
+  saveCategories(categories);
+  render();
+}
+document.getElementById('addCategory').onclick = addCategory;
+document.getElementById('newCategory').addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); });
+render();
+</script>
+</body>
+</html>

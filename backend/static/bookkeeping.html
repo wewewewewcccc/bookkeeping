@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记账助手</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; max-width: 980px; margin: 0 auto; padding: 24px; background: #f5f7fb; }
+  h1 { font-size: 24px; margin: 0; }
+  #drop { border: 2px dashed #bbb; border-radius: 10px; padding: 40px; text-align: center; color: #888; cursor: pointer; background: #fff; }
+  #upload-month-wrap { display:flex; align-items:center; gap:8px; margin:0 0 10px; }
+  #drop.drag { border-color: #4a90d9; color: #4a90d9; }
+  #status { margin: 10px 0; color: #666; }
+  #progress { height: 6px; border-radius: 3px; background: #e5e9f0; margin: 8px 0; overflow: hidden; display: none; }
+  #progress-bar { height: 100%; width: 0; background: #4a90d9; border-radius: 3px; transition: width .25s; }
+  .receipt { background: #fff; border-radius: 10px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .receipt img { display:block; max-width:100%; width:auto; max-height:420px; margin:16px 0 0; border-radius:8px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #eee; padding: 5px 6px; text-align: left; font-size: 13px; }
+  th:nth-child(1), td:nth-child(1) { width: 112px; }
+  th:nth-child(2), td:nth-child(2) { width: 82px; }
+  th:nth-child(3), td:nth-child(3) { width: 118px; }
+  td input[type="date"] { width: 108px; padding: 5px 4px; font-size: 12px; }
+  td input[type="text"] { width: 100%; min-width: 0; padding: 5px 6px; font-size: 12px; }
+  td select { max-width: 100%; padding: 5px 4px; font-size: 12px; }
+  .amount { color: #d43; }
+  input, select, button { font: inherit; padding: 7px 10px; border: 1px solid #d8dee9; border-radius: 7px; background: #fff; }
+  input:focus, select:focus { outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,.14); }
+  button { color: #344054; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+  button:hover { background: #f1f6fd; border-color: #4a90d9; }
+  button:active { transform: translateY(1px); }
+  #topbar { display: flex; justify-content: space-between; align-items: center; min-height: 36px; margin-bottom: 24px; }
+  #nav { display: flex; align-items: center; gap: 4px; margin-left: 24px; }
+  #nav a { padding: 7px 14px; border-radius: 8px; color: #52514e; text-decoration: none; font-size: 14px; }
+  #nav a:hover { background: #f1f3f6; }
+  #nav a.active { background: #e8f0fb; color: #2a78d6; font-weight: 600; }
+  #topbar .title-row { display: flex; align-items: center; gap: 0; }
+  #settings-wrap { position: relative; }
+  #settings-btn { font-size: 14px; }
+  #settings-dropdown { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid #e0e6ee; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 130px; padding: 6px; display: none; z-index: 10; }
+  #settings-dropdown.open { display: block; }
+  #settings-dropdown a { display: block; padding: 9px 12px; border-radius: 7px; color: #344054; text-decoration: none; font-size: 14px; }
+  #settings-dropdown a:hover { background: #f1f6fd; color: #4a90d9; }
+  #stats-filter { display: flex; gap: 8px; margin: 8px 0 12px; }
+  #stats-filter select { min-width: 90px; }
+  #record-filter { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 14px; }
+  #record-filter select, #record-filter input { min-width:0; width:112px; }
+  #record-filter #record-month { width:150px; }
+  #clear-record-filter { color:#667085; }
+  #filtered-total { text-align:right; color:#667085; font-size:13px; margin:-6px 4px 10px 0; }
+  .actions { white-space: nowrap; }
+  .actions button { color: #b42318; border-color: #f3c1bd; background: #fff7f6; }
+  .actions button:hover { background: #fee4e2; border-color: #e06b63; }
+  .amount-select { min-width: 150px; color: #b42318; font-weight: 600; }
+  .receipt-image-wrap { display:flex; flex-direction:column; align-items:flex-start; margin-top:16px; }
+  .receipt-image-wrap button { margin-top:8px; color:#b42318; border-color:#f3c1bd; background:#fff7f6; }
+  .clear { clear: both; }
+  h2 { font-size: 17px; margin-top: 30px; }
+  .mobile-records, #bottom-nav, #mobile-upload { display:none; }
+  @media (max-width: 640px) {
+    body { padding: 14px; }
+    body { padding-bottom: 82px; }
+    #drop { display:none; }
+    #mobile-upload { display:block; width:100%; margin:8px 0 16px; padding:13px; border:0; border-radius:12px; background:#2875cf; color:#fff; font-weight:600; font-size:15px; }
+    #topbar { align-items: flex-start; }
+    #topbar .title-row { flex-wrap: wrap; gap: 10px; }
+    #nav { margin-left: 0; }
+    #nav a { padding: 7px 10px; }
+    .receipt { padding: 12px; overflow: hidden; }
+    .receipt table { display:none; }
+    .mobile-records { display:block; }
+    .mobile-record { display:grid; grid-template-columns:34px 1fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #edf0f5; }
+    .mobile-icon { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:#e8f0fb; color:#2875cf; font-size:16px; }
+    .mobile-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mobile-meta { margin-top:4px; color:#98a2b3; font-size:12px; }
+  .mobile-amount { color:#d64c4c; font-size:16px; font-weight:700; }
+    .mobile-record { cursor:pointer; }
+    .mobile-record:active { background:#f5f8fc; border-radius:10px; }
+    .mobile-record { position:relative; transition:transform .2s ease; touch-action:pan-y; }
+    .mobile-record.swiped { transform:translateX(-72px); }
+    .mobile-delete { position:absolute; right:-72px; top:0; bottom:0; width:64px; border:0; border-radius:8px; background:#d92d20; color:#fff; font-size:12px; }
+    .receipt-image-wrap { display:none; }
+    #bottom-nav { position:fixed; display:flex; left:0; right:0; bottom:0; height:64px; padding-bottom:env(safe-area-inset-bottom); background:#fff; border-top:1px solid #e6eaf0; z-index:20; justify-content:space-around; }
+    #bottom-nav a { flex:1; text-align:center; padding-top:11px; color:#667085; text-decoration:none; font-size:12px; }
+    #bottom-nav a.active { color:#2875cf; font-weight:600; }
+    #bottom-nav span { display:block; font-size:20px; line-height:22px; }
+    table { width: 100%; min-width: 0; table-layout: fixed; }
+    th, td { padding: 4px 3px; font-size: 11px; }
+    th:nth-child(1), td:nth-child(1) { width: 91px; }
+    th:nth-child(2), td:nth-child(2) { width: 58px; }
+    th:nth-child(3), td:nth-child(3) { width: 82px; }
+    td input[type="date"] { width: 88px; font-size: 10px; }
+    td input[type="text"] { font-size: 11px; text-overflow: ellipsis; }
+    td select { width: 55px; font-size: 10px; }
+    .amount-select { min-width: 0; width: 80px; font-size: 10px; }
+    .receipt img { max-height: 360px; max-width: 100%; }
+    #record-filter { gap: 6px; }
+    #record-filter select, #record-filter input, #record-filter button { flex: 0 1 auto; width:auto; min-width:0; }
+    #record-filter #record-month { width:150px; }
+    .mobile-panel { background:#fff; border-radius:16px; padding:14px; box-shadow:0 3px 14px rgba(31,51,73,.10); margin:12px 0 18px; }
+  }
+  .mobile-panel { background:#fff; border-radius:16px; padding:16px; box-shadow:0 3px 14px rgba(31,51,73,.08); }
+  #detail-title { margin:0 0 12px; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(16,24,40,.42); display:none; align-items:flex-end; justify-content:center; z-index:50; }
+  .modal-backdrop.open { display:flex; }
+  .edit-modal { width:min(560px,100%); max-height:92vh; overflow:auto; background:#fff; border-radius:20px 20px 0 0; padding:20px; box-shadow:0 -8px 30px rgba(0,0,0,.18); }
+  .edit-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .edit-head h3 { margin:0; font-size:18px; }
+  .edit-close { border:0; font-size:22px; padding:2px 8px; }
+  .edit-image { display:block; width:100%; max-height:360px; object-fit:contain; border-radius:12px; background:#f4f6f8; margin-bottom:14px; }
+  .edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .edit-grid label { display:flex; flex-direction:column; gap:5px; color:#667085; font-size:13px; }
+  .edit-grid input[type="date"] { text-align:left; text-align-last:left; padding-left:10px; }
+  .edit-grid .wide { grid-column:1/-1; }
+  .edit-actions { display:flex; gap:8px; margin-top:16px; }
+  .edit-actions button { flex:1; padding:11px; }
+  .edit-save { background:#2875cf; color:#fff; border-color:#2875cf; }
+  @media (max-width:640px) { .edit-modal { padding:16px; } .edit-image { max-height:300px; } }
+</style>
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/access.js" defer></script>
+</head>
+<body>
+<div id="topbar">
+  <div class="title-row">
+    <h1>记账助手</h1>
+    <nav id="nav">
+      <a href="/bookkeeping.html" class="active">账单</a>
+      <a href="/stats.html">统计</a>
+      <a href="/settings.html">设置</a>
+    </nav>
+  </div>
+</div>
+<section class="mobile-panel upload-panel">
+<div id="upload-month-wrap"><label for="upload-month">上传月份</label><input id="upload-month" type="month"></div>
+<div id="drop">点击选择或拖拽小票图片到此处（支持多张，每张为一个独立账单）</div>
+<div id="status"></div>
+<div id="progress"><div id="progress-bar"></div></div>
+<input type="file" id="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" multiple hidden>
+<button id="mobile-upload" onclick="fileInput.click()">＋ 上传截图</button>
+</section>
+<section class="mobile-panel detail-panel">
+<h2 id="detail-title">账单明细</h2>
+<div id="record-filter">
+  <input id="record-month" type="month" title="选择账单月份">
+  <button id="clear-record-filter">重置</button>
+</div>
+<div id="filtered-total">支出：0</div>
+<div id="list"></div>
+</section>
+
+<div id="edit-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="edit-modal">
+    <div class="edit-head"><h3>账单编辑</h3><button class="edit-close" onclick="closeEditor()" aria-label="关闭">×</button></div>
+    <img id="edit-image" class="edit-image" alt="账单原图">
+    <div class="edit-grid">
+      <label>日期<input id="edit-date" type="date"></label>
+      <label>分类<select id="edit-category"></select></label>
+      <label>金额<select id="edit-amount"></select></label>
+      <label class="wide">摘要<input id="edit-title" type="text"></label>
+    </div>
+    <div class="edit-actions"><button onclick="closeEditor()">取消</button><button class="edit-save" onclick="saveEditor()">保存修改</button></div>
+  </div>
+</div>
+
+<script>
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+const status = document.getElementById('status');
+const currentMonth = new Date();
+document.getElementById('upload-month').value = currentMonth.getFullYear() + '-' + String(currentMonth.getMonth() + 1).padStart(2, '0');
+
+// Prevent the browser from navigating to a dropped image.
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => e.preventDefault());
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('drag'); };
+drop.ondragleave = () => drop.classList.remove('drag');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('drag'); upload([...e.dataTransfer.files]); };
+fileInput.onchange = () => { upload([...fileInput.files]); fileInput.value = ''; };
+
+async function upload(files) {
+  if (uploading) return;
+  files = files.filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp)$/i.test(f.name));
+  if (!files.length) {
+    status.textContent = '请选择 JPG、PNG、WEBP 或 BMP 图片';
+    return;
+  }
+  uploading = true;
+  const progress = document.getElementById('progress');
+  const bar = document.getElementById('progress-bar');
+  progress.style.display = 'block';
+  bar.style.width = '0%';
+  let ok = 0;
+  const failed = [];
+  const selectedMonth = document.getElementById('upload-month').value;
+  for (let i = 0; i < files.length; i++) {
+    status.textContent = `正在识别第 ${i + 1}/${files.length} 张：${files[i].name}`;
+    const fd = new FormData();
+    fd.append('files', files[i]);
+    fd.append('categories', getCategories().join(','));
+    fd.append('trade_month', selectedMonth);
+    try {
+      const resp = await fetch('/api/receipts', { method: 'POST', body: fd });
+      if (resp.ok) {
+        ok++;
+      } else {
+        let msg = 'HTTP ' + resp.status;
+        try { msg = (await resp.json()).detail || msg; } catch (e) { /* 非 JSON 响应 */ }
+        failed.push(`${files[i].name}（${msg}）`);
+      }
+    } catch (err) {
+      failed.push(`${files[i].name}（上传失败，请确认服务正在运行）`);
+    }
+    bar.style.width = ((i + 1) / files.length * 100) + '%';
+  }
+  uploading = false;
+  if (ok) refresh();
+  status.textContent = failed.length
+    ? `完成：成功 ${ok} 张，失败 ${failed.length} 张（${failed.join('、')}）`
+    : `完成：${ok} 张图片已记账`;
+  setTimeout(() => { progress.style.display = 'none'; }, 1500);
+}
+let uploading = false;
+
+async function refresh() {
+  let receipts = await (await fetch('/api/receipts')).json();
+  const monthValue = document.getElementById('record-month')?.value || '';
+  const month = monthValue ? String(Number(monthValue.slice(5))) : '';
+  const monthYear = monthValue ? monthValue.slice(0, 4) : '';
+  receipts = receipts.map(r => ({...r, records: r.records.filter(rec => {
+    if (!rec.trade_date) return false;
+    const parts = rec.trade_date.split('-');
+    return (!month || parts[0] === monthYear) && (!month || String(Number(parts[1])) === month);
+  })})).filter(r => r.records.length);
+  const filteredTotal = receipts.reduce((sum, r) => sum + r.records.reduce((s, rec) => s + Number(rec.amount || 0), 0), 0);
+  document.getElementById('filtered-total').textContent = '支出：' + filteredTotal.toFixed(2);
+  window.currentReceipts = receipts;
+  document.getElementById('list').innerHTML = receipts.map(r => `
+    <div class="receipt">
+      <table>
+        <tr><th>日期</th><th>分类</th><th>金额</th><th>摘要</th></tr>
+        ${r.records.map(rec => `
+          <tr>
+            <td>${rec.trade_date}</td>
+            <td>${esc(rec.category)}</td>
+            <td class="amount">${amountSelect(rec)}</td>
+            <td>${esc(rec.title)}</td>
+          </tr>`).join('') || '<tr><td colspan="4">未识别出记录</td></tr>'}
+      </table>
+      <div class="mobile-records">
+        ${r.records.map(rec => `<div class="mobile-record" data-id="${rec.id}" data-receipt-id="${r.id}" onclick="openEditor(${r.id}, ${rec.id})">
+          <div class="mobile-icon">¥</div>
+          <div><div class="mobile-title">${esc(rec.title || '图片账单')}</div><div class="mobile-meta">${rec.trade_date} · ${esc(rec.category || '其他')}</div></div>
+          <div class="mobile-amount">¥${Number(rec.amount).toFixed(2)}</div>
+        </div>`).join('') || '<div class="mobile-meta">未识别出记录</div>'}
+      </div>
+      <div class="receipt-image-wrap">
+        <img src="/images/${r.image_path}" loading="lazy">
+        <button onclick="deleteReceipt(${r.id})">删除这张账单</button>
+</div>
+      <div class="clear"></div>
+    </div>`).join('');
+
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function amountSelect(rec) {
+  const candidates = (rec.extra && Array.isArray(rec.extra.amount_candidates))
+    ? rec.extra.amount_candidates.filter(c => Number(c.value) > 0)
+    : [];
+  if (!candidates.some(c => Number(c.value) === Number(rec.amount))) {
+    candidates.unshift({value: rec.amount, context: '当前金额', type: 'actual_paid'});
+  }
+  const options = candidates.map(c => {
+    const value = Number(c.value).toFixed(2);
+    const label = c.context ? value + '（' + c.context + '）' : value;
+    return '<option value="' + value + '"' + (Number(c.value) === Number(rec.amount) ? ' selected' : '') + '>' + esc(label) + '</option>';
+  }).join('');
+  return '<select class="amount-select" data-id="' + rec.id + '" onchange="updateAmount(this)">' + options + '</select>';
+}
+async function updateAmount(select) {
+  const amount = Number(select.value);
+  if (!(amount > 0)) return;
+  select.disabled = true;
+  try {
+    const resp = await fetch('/api/records/' + select.dataset.id, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({amount})
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    status.textContent = '金额已更新';
+    refresh();
+  } catch (err) {
+    status.textContent = '金额修改失败：' + err.message;
+    refresh();
+  }
+}
+function getCategories() {
+  return JSON.parse(localStorage.getItem('bookkeeping_categories') || '["餐饮","购物","交通","日用","娱乐","医疗","其他"]');
+}
+function initStatsFilter() {
+  const now = new Date();
+  const yearSelect = document.getElementById('stats-year');
+  for (let year = now.getFullYear(); year >= now.getFullYear() - 10; year--) {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year + '年';
+    yearSelect.appendChild(option);
+  }
+  yearSelect.value = now.getFullYear();
+  document.getElementById('stats-month').value = String(now.getMonth() + 1);
+  yearSelect.onchange = () => refresh();
+  document.getElementById('stats-month').onchange = () => refresh();
+}
+function initSettingsMenu() {
+  const btn = document.getElementById('settings-btn');
+  const menu = document.getElementById('settings-dropdown');
+  if (!btn || !menu) return;
+  btn.onclick = e => { e.stopPropagation(); menu.classList.toggle('open'); };
+  document.addEventListener('click', () => menu.classList.remove('open'));
+}
+function initRecordFilter() {
+  const now = new Date();
+  fetch('/api/receipts').then(r => r.json()).then(items => {
+    document.getElementById('record-month').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    refresh();
+  });
+  document.getElementById('record-month').onchange = refresh;
+  document.getElementById('clear-record-filter').onclick = () => {
+    const today = new Date();
+    document.getElementById('record-month').value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    refresh();
+  };
+}
+function updateRecordField(id, field, value) {
+  const body = {};
+  body[field] = value;
+  return fetch('/api/records/' + id, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+}
+async function deleteReceipt(id) {
+  if (!confirm('确定删除这张账单及其图片吗？')) return;
+  const resp = await fetch('/api/receipts/' + id, {method:'DELETE'});
+  status.textContent = resp.ok ? '账单已删除' : '删除失败';
+  if (resp.ok) refresh();
+}
+function enhanceRecords(receipts) {
+  document.querySelectorAll('#list .receipt').forEach((card, i) => {
+    const receipt = receipts[i];
+    const table = card.querySelector('table');
+    receipt.records.forEach((rec, rowIndex) => {
+      const row = table.rows[rowIndex + 1];
+      if (!row) return;
+      const dateCell = row.cells[0];
+      const categoryCell = row.cells[1];
+      const titleCell = row.cells[3];
+      const date = document.createElement('input'); date.type='date'; date.value=rec.trade_date;
+      date.onchange=()=>updateRecordField(rec.id,'trade_date',date.value);
+      dateCell.textContent=''; dateCell.appendChild(date);
+      const title = document.createElement('input'); title.type='text'; title.value=rec.title;
+      title.onchange=()=>updateRecordField(rec.id,'title',title.value);
+      titleCell.textContent=''; titleCell.appendChild(title);
+      const select = document.createElement('select');
+      getCategories().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;o.selected=c===rec.category;select.appendChild(o);});
+      select.onchange=()=>updateRecordField(rec.id,'category',select.value);
+      categoryCell.textContent=''; categoryCell.appendChild(select);
+    });
+  });
+}
+let editingRecord = null;
+function openEditor(receiptId, recordId) {
+  const receipt = (window.currentReceipts || []).find(r => r.id === receiptId);
+  const rec = receipt && receipt.records.find(x => x.id === recordId);
+  if (!receipt || !rec) return;
+  editingRecord = {receipt, rec};
+  document.getElementById('edit-image').src = '/images/' + receipt.image_path;
+  document.getElementById('edit-date').value = rec.trade_date || '';
+  document.getElementById('edit-title').value = rec.title || '';
+  const cat = document.getElementById('edit-category');
+  cat.innerHTML = getCategories().map(c => '<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+  cat.value = rec.category || getCategories()[0];
+  const amount = document.getElementById('edit-amount');
+  const candidates = (rec.extra && Array.isArray(rec.extra.amount_candidates)) ? rec.extra.amount_candidates : [];
+  const values = [rec.amount, ...candidates.map(c => c.value)].filter(v => Number(v) > 0).map(v => Number(v).toFixed(2));
+  amount.innerHTML = [...new Set(values)].map(v => '<option value="'+v+'">'+v+'</option>').join('');
+  amount.value = Number(rec.amount).toFixed(2);
+  document.getElementById('edit-backdrop').classList.add('open');
+}
+function closeEditor() { document.getElementById('edit-backdrop').classList.remove('open'); editingRecord = null; }
+async function saveEditor() {
+  if (!editingRecord) return;
+  const rec = editingRecord.rec;
+  const body = {trade_date:document.getElementById('edit-date').value, category:document.getElementById('edit-category').value, amount:Number(document.getElementById('edit-amount').value), title:document.getElementById('edit-title').value};
+  const resp = await fetch('/api/records/' + rec.id, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (!resp.ok) { status.textContent = '保存失败'; return; }
+  closeEditor(); status.textContent = '账单已更新'; refresh();
+}
+document.getElementById('edit-backdrop').onclick = e => { if (e.target.id === 'edit-backdrop') closeEditor(); };
+function initMobileSwipe() {
+  document.querySelectorAll('.mobile-record').forEach(row => {
+    const id = row.dataset.receiptId;
+    if (!id) return;
+    const del = document.createElement('button'); del.className = 'mobile-delete'; del.textContent = '删除';
+    del.onclick = e => { e.stopPropagation(); deleteReceipt(id); };
+    row.appendChild(del);
+    let startX = 0, startY = 0;
+    row.addEventListener('touchstart', e => { const t=e.touches[0]; startX=t.clientX; startY=t.clientY; }, {passive:true});
+    row.addEventListener('touchend', e => { const t=e.changedTouches[0]; const dx=t.clientX-startX; const dy=t.clientY-startY; if (Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)) { e.preventDefault(); row.classList.toggle('swiped', dx<0); } }, {passive:false});
+  });
+}
+const originalRefresh = refresh;
+refresh = async function() {
+  await originalRefresh();
+  enhanceRecords(window.currentReceipts || []);
+  initMobileSwipe();
+};
+initSettingsMenu();
+initRecordFilter();
+refresh();
+</script>
+<nav id="bottom-nav"><a class="active" href="/bookkeeping.html">账单</a><a href="/stats.html">统计</a><a href="/settings.html">设置</a></nav>
+</body>
+</html>
