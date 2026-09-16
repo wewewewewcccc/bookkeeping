@@ -16,7 +16,7 @@
 <div class="summary"><div class="metric total">总支出<b id="total">¥0.00</b></div><div class="metric">交易笔数<b id="count">0</b></div><div class="metric">分类数量<b id="cats">0</b></div></div>
 <div class="card"><h2>分类支出</h2><div id="category"></div></div>
 <div class="card"><h2>月度趋势</h2><div id="monthly" class="muted">暂无数据</div></div>
-<nav id="bottom-nav"><a href="/bookkeeping.html">账单</a><a class="active" href="/stats.html">统计</a><a href="/settings.html">设置</a></nav>
+<nav id="bottom-nav"><a href="/bookkeeping.html">账单</a><a class="active" href="/stats.html">统计</a><a class="quick-add" href="/add.html">＋<small>记账</small></a><a href="/discover.html">发现</a><a href="/settings.html">设置</a></nav>
 <script>
 const now=new Date(), yearEl=document.getElementById('year'), monthEl=document.getElementById('month');
 for(let y=now.getFullYear();y>=now.getFullYear()-10;y--){let o=document.createElement('option');o.value=y;o.textContent=y+'年';yearEl.appendChild(o)} yearEl.value=now.getFullYear();monthEl.value=now.getMonth()+1;

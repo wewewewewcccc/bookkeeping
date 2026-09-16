@@ -38,6 +38,19 @@ class ReceiptOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class ManualRecordIn(BaseModel):
+    title: str = ""
+    amount: float = Field(gt=0)
+    trade_date: date
+    category: str = "其他"
+
+@router.post("/records/manual", response_model=ReceiptOut)
+def create_manual_record(body: ManualRecordIn, db: Session = Depends(get_db)):
+    receipt = Receipt(image_path="", ocr_text="手动记账")
+    receipt.records.append(Record(title=body.title[:255], amount=round(body.amount, 2), trade_date=body.trade_date, category=body.category[:50], extra={"manual": True}))
+    db.add(receipt); db.commit(); db.refresh(receipt)
+    return receipt
+
 
 @router.post("/receipts", response_model=list[ReceiptOut])
 async def upload_receipts(

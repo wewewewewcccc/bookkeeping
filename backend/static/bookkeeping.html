@@ -24,7 +24,7 @@
   td input[type="date"] { width: 108px; padding: 5px 4px; font-size: 12px; }
   td input[type="text"] { width: 100%; min-width: 0; padding: 5px 6px; font-size: 12px; }
   td select { max-width: 100%; padding: 5px 4px; font-size: 12px; }
-  .amount { color: #d43; }
+  .amount { color: #587568; }
   input, select, button { font: inherit; padding: 7px 10px; border: 1px solid #d8dee9; border-radius: 7px; background: #fff; }
   input:focus, select:focus { outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,.14); }
   button { color: #344054; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
@@ -74,7 +74,7 @@
     .mobile-icon { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:#e8f0fb; color:#2875cf; font-size:16px; }
     .mobile-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .mobile-meta { margin-top:4px; color:#98a2b3; font-size:12px; }
-  .mobile-amount { color:#d64c4c; font-size:16px; font-weight:700; }
+    .mobile-amount { color:#587568; font-size:16px; font-weight:700; }
     .mobile-record { cursor:pointer; }
     .mobile-record:active { background:#f5f8fc; border-radius:10px; }
     .mobile-record { position:relative; transition:transform .2s ease; touch-action:pan-y; }
@@ -117,6 +117,10 @@
   .edit-actions button { flex:1; padding:11px; }
   .edit-save { background:#2875cf; color:#fff; border-color:#2875cf; }
   @media (max-width:640px) { .edit-modal { padding:16px; } .edit-image { max-height:300px; } }
+  @media (max-width:640px) { .upload-panel { display:none; } }
+  .choice-modal { width:min(380px,92%); background:#fff; border-radius:18px; padding:22px; text-align:center; }
+  .choice-modal h3 { margin:0 0 16px; }
+  .choice-modal button { display:block; width:100%; margin:10px 0; padding:12px; }
 </style>
 <link rel="stylesheet" href="/assets/app.css">
 <script src="/assets/access.js" defer></script>
@@ -134,7 +138,7 @@
 </div>
 <section class="mobile-panel upload-panel">
 <div id="upload-month-wrap"><label for="upload-month">上传月份</label><input id="upload-month" type="month"></div>
-<div id="drop">点击选择或拖拽小票图片到此处（支持多张，每张为一个独立账单）</div>
+<div id="drop" onclick="location.href='/add.html'">进入记账：上传截图或手动填写</div>
 <div id="status"></div>
 <div id="progress"><div id="progress-bar"></div></div>
 <input type="file" id="file" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp" multiple hidden>
@@ -163,6 +167,9 @@
     <div class="edit-actions"><button onclick="closeEditor()">取消</button><button class="edit-save" onclick="saveEditor()">保存修改</button></div>
   </div>
 </div>
+<div id="accounting-choice" class="modal-backdrop"><div class="choice-modal"><h3>选择记账方式</h3><button class="edit-save" onclick="chooseUpload()">上传截图记账</button><button onclick="chooseManual()">手动记账</button><button onclick="closeChoice()">取消</button></div></div>
+<div id="upload-progress-modal" class="modal-backdrop"><div class="choice-modal"><h3>正在识别账单</h3><p id="upload-progress-text">准备上传…</p><div id="upload-progress-track" style="height:8px;background:#edf1f7;border-radius:8px;overflow:hidden"><div id="upload-progress-fill" style="height:100%;width:0;background:#55b879;transition:width .2s"></div></div></div></div>
+<div id="manual-backdrop" class="modal-backdrop"><div class="edit-modal"><div class="edit-head"><h3>手动记账</h3><button class="edit-close" onclick="closeManual()">×</button></div><div class="edit-grid"><label>日期<input id="manual-date" type="date"></label><label>分类<select id="manual-category"></select></label><label>金额<input id="manual-amount" type="number" min="0" step="0.01"></label><label class="wide">摘要<input id="manual-title" type="text"></label></div><div class="edit-actions"><button onclick="closeManual()">取消</button><button class="edit-save" onclick="saveManual()">保存</button></div></div></div>
 
 <script>
 const drop = document.getElementById('drop');
@@ -188,6 +195,7 @@ async function upload(files) {
     return;
   }
   uploading = true;
+  document.getElementById('upload-progress-modal').classList.add('open');
   const progress = document.getElementById('progress');
   const bar = document.getElementById('progress-bar');
   progress.style.display = 'block';
@@ -197,6 +205,7 @@ async function upload(files) {
   const selectedMonth = document.getElementById('upload-month').value;
   for (let i = 0; i < files.length; i++) {
     status.textContent = `正在识别第 ${i + 1}/${files.length} 张：${files[i].name}`;
+    document.getElementById('upload-progress-text').textContent = `正在识别第 ${i + 1}/${files.length} 张：${files[i].name}`;
     const fd = new FormData();
     fd.append('files', files[i]);
     fd.append('categories', getCategories().join(','));
@@ -214,8 +223,10 @@ async function upload(files) {
       failed.push(`${files[i].name}（上传失败，请确认服务正在运行）`);
     }
     bar.style.width = ((i + 1) / files.length * 100) + '%';
+    document.getElementById('upload-progress-fill').style.width = ((i + 1) / files.length * 100) + '%';
   }
   uploading = false;
+  setTimeout(() => document.getElementById('upload-progress-modal').classList.remove('open'), 500);
   if (ok) refresh();
   status.textContent = failed.length
     ? `完成：成功 ${ok} 张，失败 ${failed.length} 张（${failed.join('、')}）`
@@ -398,6 +409,25 @@ async function saveEditor() {
   closeEditor(); status.textContent = '账单已更新'; refresh();
 }
 document.getElementById('edit-backdrop').onclick = e => { if (e.target.id === 'edit-backdrop') closeEditor(); };
+const quickAddButton = document.getElementById('quick-add');
+if (quickAddButton) quickAddButton.onclick = () => document.getElementById('accounting-choice').classList.add('open');
+document.addEventListener('click', e => {
+  if (e.target.closest && e.target.closest('#quick-add')) {
+    e.preventDefault();
+    openAccountingChoice();
+  }
+});
+function openAccountingChoice(){ const el=document.getElementById('accounting-choice'); if(el) el.classList.add('open'); }
+if (new URLSearchParams(location.search).get('add') === '1') {
+  openAccountingChoice();
+  window.addEventListener('load', openAccountingChoice);
+  setTimeout(openAccountingChoice, 250);
+}
+function closeChoice(){document.getElementById('accounting-choice').classList.remove('open');}
+function chooseUpload(){closeChoice();fileInput.click();}
+function chooseManual(){closeChoice();const s=document.getElementById('manual-category');s.innerHTML=getCategories().map(c=>'<option>'+esc(c)+'</option>').join('');document.getElementById('manual-date').value=new Date().toISOString().slice(0,10);document.getElementById('manual-backdrop').classList.add('open');}
+function closeManual(){document.getElementById('manual-backdrop').classList.remove('open');}
+async function saveManual(){const amount=Number(document.getElementById('manual-amount').value);if(!(amount>0)){alert('请输入金额');return;}const r=await fetch('/api/records/manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:document.getElementById('manual-title').value,amount,trade_date:document.getElementById('manual-date').value,category:document.getElementById('manual-category').value})});if(r.ok){closeManual();status.textContent='手动账单已保存';refresh();}else alert('保存失败');}
 function initMobileSwipe() {
   document.querySelectorAll('.mobile-record').forEach(row => {
     const id = row.dataset.receiptId;
@@ -420,6 +450,6 @@ initSettingsMenu();
 initRecordFilter();
 refresh();
 </script>
-<nav id="bottom-nav"><a class="active" href="/bookkeeping.html">账单</a><a href="/stats.html">统计</a><a href="/settings.html">设置</a></nav>
+<nav id="bottom-nav"><a class="active" href="/bookkeeping.html">账单</a><a href="/stats.html">统计</a><a class="quick-add" href="/add.html">＋<small>记账</small></a><a href="/discover.html">发现</a><a href="/settings.html">设置</a></nav>
 </body>
 </html>
